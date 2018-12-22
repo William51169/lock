@@ -1,0 +1,89 @@
+ #include <LiquidCrystal.h> //LCD库文件
+ #include <Keypad.h>        //键盘库文件
+ #include<SoftwareSerial.h>  //库文件
+ const byte ROWS = 4; //four rows
+const byte COLS = 4; //four columns
+char hexaKeys[ROWS][COLS] = {
+  {'1','2','3','A'},
+  {'4','5','6','B'},
+  {'7','8','9','C'},
+  {'*','0','#','D'}
+};
+byte rowPins[ROWS] = {9, 8, 7, 6}; //connect to the row pinouts of the keypad
+byte colPins[COLS] = {A5,A4,A3,A2}; //connect to the column pinouts of the keypad
+Keypad customKeypad = Keypad( makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS); 
+LiquidCrystal lcd(12, 11, 5, 4, 3, 2); //LCD引脚连接 
+String key = " ";   //保存密码
+String inPut = " ";//保存输入字符串
+
+SoftwareSerial mySerial(8, 9); // RX, TX的连接
+
+
+void setup() {
+Serial.begin(115200); //设置波特率
+  randomSeed(analogRead(0));  //设置随机密码种子
+  for (int i = 0; i < 4; i++)  //产生四位随机密码并保存
+  {
+    key+=random(10);
+  }
+  delay(2000);
+  lcd.begin(16, 2);      
+  lcd.setCursor(0, 0);//1602输出位置，格式列、行
+  lcd.print("Please input :");//1602输出
+
+
+
+delay(100);
+Serial.println("AT+CWMODE=1");  //AT指令
+delay(2500);
+Serial.println("AT+CWJAP=五块一小时","12345678");  //wifi名称和密码
+delay(5000);
+Serial.println("AT+CIPMUX=0");
+delay(1000);
+Serial.println("AT+CIPMODE=1");
+delay(2000);
+Serial.println("AT+SAVETRANSLINK=1","TCP","183.230.40.33",80,"TCP"); //与onenight的连接
+delay(4000);
+Serial.println("AT+RST");
+delay(2000);
+randomSeed(analogRead(5)); // randomize using noise from analog pin 5
+delay(1000);
+}
+
+void loop() {
+   int a[5]; //LM35接口A0
+    for(int i=0;i<5;i=i++)
+      {
+         a[i]=random(10);
+      }
+   Serial.println("POST /devices/你的devID/datapoints HTTP/1.1");
+   Serial.println("api-key: 你的apiKey");
+   Serial.println("Host: api.heclouds.com");
+   Serial.println("Content-Length: 62");
+   Serial.println("");
+   Serial.print("{\"datastreams\":[{\"id\":\"Temp\",\"datapoints\":[{\"value\":");Serial.print(temp);Serial.println("}]}]}");
+   delay(10000);
+   
+  
+    char customKey = customKeypad.getKey();  //获取键盘值
+    if (customKey){
+    inPut += customKey;   
+    Serial.println(inPut);   
+    lcd.setCursor(6, 1);  //设置LCD输出位置
+    lcd.print(inPut);     //输出密码
+  }
+  if(key==inPut)
+  {
+     lcd.clear();//清屏
+    lcd.setCursor(4, 0);//输出位置
+    lcd.print("Bingo!");//输出bingo
+    delay(2000);//延时2秒
+  }
+  else
+  {
+    lcd.clear();//清屏
+    lcd.setCursor(5, 0);//输出位置
+    lcd.print("ERROR!");
+    inPut = "";//清空输入
+  }
+}
